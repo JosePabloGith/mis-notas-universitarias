@@ -38,7 +38,7 @@ rm -rf ~/.config/nvim/.git
 
 - Al momento de abrir nvim, podemos ver algo como:
 
-![VistalazyVim](/home/pablo/Documentos/Notas/nvim_descubrimientos/vista_lazyVim.png)
+![VistalazyVim](./img/vista_lazyVim.png)
 
 ## Sección de plugins instalados
 
@@ -47,10 +47,10 @@ rm -rf ~/.config/nvim/.git
   correspondientes a nuestras elecciones `x` para que se
   coloquen al inicio de la instalación.
 - [ ] Estas son las secciones que nuestro entorno principal posee:
-      ![vista plugins 1](/home/pablo/Documentos/Notas/nvim_descubrimientos/plugings_recomendados1.png)
+      ![vista plugins 1](./img/plugings_recomendados1.png)
       **aquí tenemos otra vista mas**
 
-[!vista plugings 2](/home/pablo/Documentos/Notas/nvim_descubrimientos/plugings_recomendados2.png)
+![vista plugings 2](./img/plugings_recomendados2.png)
 
 ### Sección de características de nvim
 

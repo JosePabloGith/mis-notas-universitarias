@@ -293,3 +293,37 @@ cd mis-notas-universitarias
 
 - Con esto la maquina ajena tendrá la misma jerarquía que
   la maquina anfitrión
+
+## Rutinas que se deben de seguir
+
+- Esenario A: imagina que en el anfitrion actualizamos cosas
+  entonces esto es lo que se debe de ejecutar
+
+```bash
+
+cd ~/Documentos/mis-notas-universitarias
+git add .
+git commit -m "docs: agregados apuntes de la clase de hoy"
+git push origin main
+
+```
+
+- En este punto la maquina principal queda bien
+  pero ¿la maquina virtualizada?
+- Para actualizar el desactualizado debes de usar:
+
+```bash
+cd ~/Documentos/mis-notas-universitarias
+git pull origin main
+
+# Es la magia de poder usar git pull
+# este comando va por gitHub por ssh, revisa
+# si hay archivos nuevos a utilizar
+# los descarga y los fuciona, de modo que se
+# mantiene actualizado.
+
+# ahora bien si solo quieres saber si hay
+# cambios debes de usar
+git fetch
+git status
+```
