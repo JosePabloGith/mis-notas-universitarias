@@ -1,0 +1,147 @@
+[*] -> INTRODUCCIÓN A Scheduler
+
+[temas necesarios]
+
+[1.] Los Estados de un Proceso (El ciclo de vida)
+
+Un proceso no solo está "encendido" o "apagado"; viaja a través de diferentes estados dependiendo de lo que 
+esté haciendo. 
+De acuerdo con el libro Operating Systems: Three Easy Pieces (OSTEP), capítulo 4 (Procesos), existen 3 estados
+fundamentales:
+
+[*] {Running} (En ejecución): El proceso está literalmente corriendo en el procesador (CPU) en este exacto 
+milisegundo. 
+Está ejecutando instrucciones (como tu ciclo for haciendo matemáticas).
+
+[*] {Ready} (Listo): El proceso está listo para ejecutarse y quiere CPU, pero el Sistema Operativo ha decidido 
+asignarle el procesador a otro programa momentáneamente.
+
+[*] {Blocked} (Bloqueado / Durmiendo): El proceso ha pedido hacer algo que toma tiempo (como leer un disco duro, 
+esperar a que el 
+usuario presione una tecla, o hacer un sleep()). En este estado, el proceso no usa la CPU, se hace a un lado
+para dejar que otros trabajen.
+
+(Referencia: OSTEP_4_procesos.pdf, sección de "Process States")
+
+
+[2.] El Planificador de la CPU (The Scheduler)
+
+Imagina que tienes 100 procesos "Listos" (Ready) pero solo tienes 1 CPU. ¿A quién le das el procesador? Ahí entra el
+Scheduler(Planificador).
+
+El planificador es el "cerebro" del Sistema Operativo encargado de decidir qué proceso corre y por cuánto tiempo.
+Para evitar que un solo proceso acapare toda la computadora y la congele, el planificador detiene los procesos 
+a la fuerza cada ciertos milisegundos y le da turno a otro. A esta acción de pausar uno y reanudar otro se 
+le llama Cambio de Contexto (Context Switch).
+
+(Referencia: OSTEP_6_ejecucionDirecta.pdf, sobre el mecanismo de "Context Switch" y límite de ejecución directa).
+
+[3.] Las Prioridades y el Comportamiento (MLFQ)
+Los sistemas operativos modernos, como tu Debian Linux, usan un planificador inteligente (a menudo basado en un
+modelo llamado [Multi-Level Feedback] Queue o MLFQ).
+
+Este planificador juzga a los procesos por su comportamiento:
+
+[*] Procesos amables (I/O Bound / Interactivos): Si un proceso pasa mucho tiempo durmiendo o esperando 
+(estado Blocked|sleeping), el OS asume que es un programa interactivo (como tu teclado o interfaz gráfica). 
+Le da alta prioridad para que cuando despierte, responda de inmediato. 
+(Fase 1 de nuesto código de ejemplo).
+
+[*] Procesos acaparadores (CPU Bound): Si un programa exprime el procesador al 100% sin pausas (estado Running constante), el OS 
+lo detecta, dice "este tipo está acaparando todo", y le baja la prioridad y lo manda al fondo de la fila para evitar que otros 
+programas se congelen. (Fase 2 de nuestro código de ejemplo).
+
+
+
+
+[*] Objetivo de la practica
+El ejercicio que vamos a hacer, va a "engañar" al Scheduler. Primero, tu programa se comportará como un ["buen ciudadano"] 
+durmiendo 30 segundos (estado Blocked), y luego se convertirá en un "monstruo acaparador" haciendo cálculos durante 
+60 segundos (estado Running). El objetivo con htop será ver cómo el Sistema Operativo (el Scheduler) reacciona, cómo 
+cambia su estado (S), y cómo ajusta su prioridad (PRI y NI) como castigo por usar tanta CPU (CPU%).
+
+[*] Indicadores que debemos de conocer:
+
+[1.] Columna U (USER - Usuario)
+¿Qué es? Indica el usuario propietario que lanzó o está ejecutando el proceso.
+
+El Detalle Técnico: En sistemas operativos basados en UNIX/Linux, la seguridad y el aislamiento son pilares.
+ Un proceso hereda los permisos del usuario que lo ejecutó. Esto significa que si el usuario "pablo" ejecuta un 
+ programa, ese proceso (por lo general) solo podrá leer o modificar archivos a los que "pablo" tenga acceso.
+
+Importancia: Si ves un proceso consumiendo mucha CPU, mirar esta columna te dice de inmediato si es un proceso del
+ sistema (usualmente propiedad de root) o una aplicación de un usuario normal.
+
+[2.] Columna S (STATE - Estado del Proceso)
+    ¿Qué es? Muestra en qué fase de su "ciclo de vida" se encuentra el proceso en este milisegundo exacto.
+
+    El Detalle Técnico: Según OSTEP_4_procesos.pdf, un proceso no siempre está usando el procesador. El estado es
+    la forma en que el Sistema Operativo etiqueta al proceso para saber qué hacer con él. En herramientas como htop o 
+    top, verás una sola letra:
+
+    [R] (Running / Ejecutándose): El proceso está usando activamente la CPU o está listo en la fila esperando su turno 
+    inminente. (Tu programa estará aquí durante el ciclo for matemático).
+
+    [S] (Sleeping / Durmiendo): El proceso está esperando que ocurra un evento (como que el usuario presione una tecla, 
+    que el disco duro responda, o simplemente un temporizador como tu función sleep()). No consume CPU.
+
+    [D] (Uninterruptible Sleep): Parecido a S, pero el proceso está esperando algo del hardware tan crítico (como una 
+    lectura de disco profundo) que no puede ser interrumpido ni siquiera para matarlo.
+
+    [Z] (Zombie): El proceso ya terminó su ejecución, pero su proceso padre aún no ha leído su "estado de salida". Es 
+    un fantasma en la tabla de procesos.
+
+    [T] (Stopped): El proceso fue pausado temporalmente (por ejemplo, si presionas Ctrl+Z en la terminal).
+
+
+[3.] Columna PRI (PRIORITY - Prioridad)
+
+¿Qué es? Es el valor dinámico que el Scheduler (Planificador) del sistema operativo usa para decidir quién usa la 
+CPU a continuación.
+
+El Detalle Técnico: En Linux, un número de prioridad más bajo significa una prioridad más alta (es decir, el número 0 
+es más importante que el 20). Según OSTEP_8_Scheduling2.pdf (donde se explica el planificador MLFQ), el sistema
+ operativo
+ cambia este número de forma dinámica. Si tu programa empieza a acaparar la CPU, el planificador lo castigará 
+aumentando este número, haciéndolo menos prioritario para que el resto del sistema no se congele.
+
+
+[4.] Columna NI (NICE - "Amabilidad")
+¿Qué es? Es un valor estático que tú (el usuario) le das a un proceso para influir en su prioridad (PRI).
+
+El Detalle Técnico: La palabra "Nice" significa "amable" en inglés. El rango va de -20 a 19.
+
+Un valor positivo (ej. 10): Hace al proceso "muy amable" con el resto. Le dice al sistema: "Toma tu tiempo, 
+deja que los demás programas pasen primero". Útil para tareas de fondo pesadas.
+
+Un valor negativo (ej. -10): Hace al proceso "poco amable" o egoísta. Le dice al sistema: "Soy muy importante, 
+dame toda la CPU que puedas". [(Nota: Solo el usuario root puede asignar valores negativos).]
+
+Conexión con PRI: La fórmula simplificada que usa Linux es: PRI final = PRI base + NI. Es decir, el valor Nice 
+empuja la prioridad hacia arriba o hacia abajo.
+
+
+
+
+[PROCEDIMIENTO A SEGUIR PARA EJECUTAR ESTA PRUEBA]
+
+[*] Fase 1: El proceso durmiendo (sleep)
+  Estado (S): Acertaste de lleno. Verás la letra S (Sleeping).
+
+	Prioridad (PRI): En esta fase, como el proceso no está usando la CPU, el planificador (Scheduler) 
+		lo considera un "buen ciudadano" o proceso interactivo. No lo castiga. De hecho, lo recompensa 
+		dándole una alta prioridad para cuando despierte. Recuerda que en Linux, alta prioridad = número bajo.
+ 		Probablemente veas su PRI estático en un valor base (como 20).
+
+[*] Fase 2: El monstruo de la CPU (Ciclo for)
+	Estado (S): El proceso despierta y empieza a hacer matemáticas pesadas. La letra cambiará a R (Running).
+
+	El Castigo (PRI): Aquí es donde tu lógica brilla. Al ver que el proceso está usando el 100% 
+		de un núcleo de tu CPU sin pausas, el planificador dice: "Este proceso es un acaparador, tengo que darle 
+		oportunidad a otros". Aquí es cuando aplica el castigo.
+
+	El valor del castigo: Como bien supusiste, lo castiga con un valor numérico más elevado. Verás 
+		que el número PRI empieza a subir (21, 25, 30...). En el mundo de Linux, empujar ese número hacia arriba 
+		significa empujar al proceso hacia el fondo de la fila de importancia.
+
+
