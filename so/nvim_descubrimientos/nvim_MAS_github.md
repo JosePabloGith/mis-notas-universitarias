@@ -326,4 +326,12 @@ git pull origin main
 # cambios debes de usar
 git fetch
 git status
+
+## ahi nos enteraremos que tan desfazado  esta
+## el directorio, posteriormente simplemente
+# nos limitamos a escribir git pull origin main
+
 ```
+
+- evidencia del funcionamiento descrito:
+  ![Evidencia](./img/prueba.png)
