@@ -271,6 +271,9 @@ git clone git@github.com:JosePabloGith/mis-notas-universitarias.git
 
 ```
 
+- si todo va bien se debería de ver esto:
+  ![clonacion dentro de Debian](./img/clonacion_debian.png)
+
 1. Debemos de preparar a la maquina ajena
    con las herramientas necesarias para entender git
 
