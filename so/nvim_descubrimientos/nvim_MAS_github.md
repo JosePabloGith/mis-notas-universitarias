@@ -224,7 +224,54 @@ que crear un repositorio nuevo desde cero. Lo que tenemos que hacer es
 1. En la terminal de la maquina debemos de pasar la llave ssh
    que conecta con nuestro GitHub. Este paso es
    el mas importante.
-2. Debemos de preparar a la maquina ajena
+
+```bash
+# recordando que primero debemos de generar la llave
+
+ssh-keygen -t ed25519 -C "197368385+JosePabloGith@users.noreply.github.com"
+
+```
+
+- Vista de la consola Debian
+
+![Debian ssh key](./img/debian_sshKey.png)
+
+1. **Debemos de presionar enter y posteriormente presionar y**
+2. Dejamos la contraseña en blanco para automatizar
+   simplemente presionando enter 2 veces
+   ![creación llave ssh vistazo](./img/debian_sshKey_dibujo.png)
+3. Registramos esa llave dentro de github
+   para ello podemos usar `cat ~/.ssh/id_ed25519.pub` para
+   ver ese contenido.
+   ![llave Debian](./img/llave_debian.png)
+
+- Así se debe de ver dentro de GitHub
+  ![Debian ssh key GitHub](./img/devian_llave_github.png)
+
+- Para que el SO recuerde la llave podemos usar
+
+```bash
+
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+
+```
+
+- Básicamente se vera asi:
+  ![encendido agente Debian](./img/eval.png)
+
+- pasamos a verificar la conexión
+  ![Debian conexión estado](./img/comprobacion-debian-ssh.png)
+
+- Pasamos a clonar las notas
+
+```bash
+# usaremos este comando:
+git clone git@github.com:JosePabloGith/mis-notas-universitarias.git
+
+```
+
+1. Debemos de preparar a la maquina ajena
    con las herramientas necesarias para entender git
 
    ```bash
@@ -233,7 +280,7 @@ que crear un repositorio nuevo desde cero. Lo que tenemos que hacer es
 
    ```
 
-3. En la terminal ajena, debemos de hacer lo siguiente:
+2. En la terminal ajena, debemos de hacer lo siguiente:
 
 ```bash
 cd ~/Documentos
