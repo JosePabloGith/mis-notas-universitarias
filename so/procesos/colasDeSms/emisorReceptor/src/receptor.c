@@ -32,7 +32,7 @@ int main() {
       exit(1);
     }
 
-    printf("Detectado un mensaje de prioridad %ld\n", msg.tipo);
+    printf("Detectado un mensaje de prioridad 1\n");
     printf("mensaje Leido: %s\n", msg.texto);
     printf("-----------------------\n");
   }
