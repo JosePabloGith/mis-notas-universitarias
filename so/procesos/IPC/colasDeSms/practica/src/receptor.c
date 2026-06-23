@@ -1,4 +1,11 @@
-// prueba
+/*
+ *    Sistemas Operativos
+ *
+ *    * MARIA RENEE BARRIENTOS ARROYO
+ *
+ *    * PEREZ DE ANDA JOSE PABLO
+ *
+ * */
 
 //
 // vamos a realizar una modificación al codigo
@@ -72,10 +79,10 @@ int main() {
     if (msg.tipo == 1) {
       // mensajes de tipo 1
 
-      printf("Detectado un mensaje de prioridad 1\n");
+      printf("Detectado mensaje de prioridad 1\n");
       printf("mensaje Leido: %s\n", msg.texto);
-      printf("Mi proposito es hacer esto : determinar y mostrar la cantidad de "
-             "vocales y espacios en blanco contenidos en el mensaje.\n");
+      // printf("Mi proposito es hacer esto : determinar y mostrar la cantidad
+      // de " "vocales y espacios en blanco contenidos en el mensaje.\n");
 
       // calculamos el tamaño del mensaje usando strlen, debemos de considerar
       //  que este strlen no cuenta /0, por lo que no se incluye en el conteo de
@@ -107,10 +114,11 @@ int main() {
           // si entramos aqui entonces se detectaron las vocales
           contador_vocales++;
         } else {
-          // puede ser consonante o espacio
-          if (copiaAuxiliar[i] != ' ') {
+          // puede ser consonante, basura o espacio
+          if (copiaAuxiliar[i] != ' ' && isalpha(copiaAuxiliar[i])) {
             contador_consonantes++;
           } else {
+            // puede ser
             contador_espacios++;
           }
         }
@@ -144,6 +152,7 @@ int main() {
         // podemos usar strchr para pasarle el arreglo vocales
         //  si regresa NULL entonces no encontro ninguna coincidendia
         //  con vocales[] lo que implica que es una consonante
+        //  o cualquier otra cosa diferente a una vocal
 
         // le meto tambien la comprobacion de isupper
         // para descartar ruido
