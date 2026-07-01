@@ -204,3 +204,145 @@ int main(){
 - despues ejecutaras al lector
 
 - que explico
+
+# Explicaciones clase
+
+```c
+// semáforos se
+// semp_op +1 acabe, libero recurso
+// sem_op -1 bloqueo de recurso
+struct sembuf{
+
+}
+
+
+  //Semaáforos semctl()
+
+// int semct
+
+/*
+Semáforos semctl()
+
+Union utilizada por semctl() para pasar información de control a los semáforos. La unión contiene un miembro para cada tipo de información que se puede pasar a semctl().
+
+union semun {
+    int val;                // Valor para SETVAL
+    struct semid_ds *buf;  // Buffer para IPC_STAT, IPC_SET
+    unsigned short *array;  // Array para GETALL, SETALL
+    //struct seminfo *__buf;  // Buffer para IPC_INFO (Linux específico)
+};
+
+arg.val  = 1;
+
+int r = semctl(semid, 0, SETVAL, arg); // esto sirve para inicializar 
+el semáforo con valor 1, es decir, desbloqueado.
+
+
+*/ 
+
+```
+
+# Vista de las teminales
+
+```bash
+# accedemos a escritor, 
+# dentro colocamos 5 0s 
+./escritor
+# ingresa los elementos del arreglo:
+# 0 0 0 0 0
+
+# nos dicen que podemos usar
+ipcs -m # para ver la memoria compartida
+
+
+ipcs -s # para ver los semáforos
+
+# si hacemos ./incrementa & ./incrementa &
+
+./incrementa & ./incrementa & wait
+# [1] 3932
+# [2] 3933
+# [1]-  Hecho                   ./incrementa
+
+# al ejecutar ./lector se espera esto: 
+./lector
+## arreglo leido desde la memoria compartida
+## 200000 200000 200000 200000 200000
+## podemos ver que el semáforo funciono
+
+## para borrar el semaforo usamos 
+ipcs -s 
+ipcrm -s "id" 
+```
+
+hasta este punto vimos la tecnica de semaforos
+binarios
+
+# Semáforos de conteo
+
+Vamos a simular a un procesador
+con 3 nucleos y 5 procesos que quieren usarlo.
+
+primero pasan 3, los otros se quedan esperando, cuando uno termina, otro entra.
+
+# semaforo contador
+
+Buscamos la exclusion mutua, pero ahora con un contador de procesos
+que pueden entrar a la zona critica. Pero la finalidad
+del semáforo contador es administrar n procesos.
+
+"val ahora sera 3, y cada vez que un proceso entre a la zona critica, se decrementa en 1, y cuando salga se incrementa en 1"
+
+| **característica** | **Semáforo Binario** | **Semáforo de Conteo** |
+|**valor inicial**| 1 | n (número de recursos disponibles, positivo)
+|**proposito general** | **Exclusion mutua: e el acceso a un recurso compartido** | **Control de acceso a múltiples instancias de un recurso** |
+|**procesos en region critica**| **Maximo 1 proceso** | **Hasta n procesos al mismo tiempo** |
+|**analogia del mundo real**|**un candidato en la puerta de un baño** | **n candidatos en la puerta de un baño con n cubículos** |
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+
+union semun {
+    int val;                // Valor para SETVAL
+    struct semid_ds *buf;  // Buffer para IPC_STAT, IPC_SET
+    unsigned short *array;  // Array para GETALL, SETALL
+};
+
+int main (){
+  key_t clave;
+  int id_sem;
+  union semun arg;
+
+  clave = ftok("/tmp", 'C');
+  if (clave == -1) {
+    perror("error al crear la llave");
+    exit(1);
+  }
+  //creamos el semaforo contador
+  id_sem = semget(clave, 1, IPC_CREAT | 0666);
+  if (id_sem == -1) {
+    perror("error al crear el semáforo");
+    exit(1);
+  }
+
+  //Inicializamos el semáforo con valor 3 (3 recursos disponibles)
+  arg.val = 3; //punto clave 3 recursos disponibles
+  int r = semctl(id_sem, 0, SETVAL, arg);
+
+  if(r==-1){
+    perror("error al inicializar el semáforo");
+    exit(1);
+  }
+
+  printf("Semáforo de conteo creado con ID: %d y valor inicial: %d\n", id_sem, arg.val);
+  printf("ID del semáforo: %d\n", id_sem);
+  printf("Nuclwos disponibles: %d\n", arg.val);
+
+  return 0;
+}
+
+
+```
