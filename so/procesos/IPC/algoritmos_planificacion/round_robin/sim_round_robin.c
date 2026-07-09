@@ -107,6 +107,7 @@ int main() {
 }
 
 void pedirPacientes(Proceso listaPacientes[]) {
+
   printf("Registrando pacientes en la clinica:\n");
   for (int i = 0; i < PACIENTES; i++) {
     int numero_aleatorio = (rand() % (10 - 1 + 1)) + 1;
