@@ -152,7 +152,10 @@ void asignar_cpu_si_libre(struct Cola *listos, Proceso *proc_cpu,
                           bool *cpu_ocupada, int reloj);
 void ejecutar_un_segundo(Proceso *proc_cpu, bool *cpu_ocupada, int *reloj);
 void finalizar_proceso_si_termina(Proceso *proc_cpu, bool *cpu_ocupada,
-                                  int reloj);
+                                  int reloj, Proceso terminados[],
+                                  int *contador_terminados);
+
+void imprimir_metricas(Proceso terminados[], int total_procesos);
 
 // ============================================================
 // 5. PROGRAMA PRINCIPAL (El SO en funcionamiento)
@@ -165,7 +168,11 @@ int main() {
   struct Cola *cola_llegadas = crear_cola();
   struct Cola *cola_listos = crear_cola();
 
-  // Carga inicial de procesos (Simulamos los "doble clic" del usuario)
+  // Aquí guardaremos a los procesos que vayan terminando para el reporte
+  Proceso procesos_terminados[NUM_PROCESOS];
+  int contador_terminados = 0;
+
+  // Carga inicial de procesos
   encolar_fifo(cola_llegadas, (Proceso){1, 2, 0, 5, 5, -1, 0, 0, 0, 0});
   encolar_fifo(cola_llegadas, (Proceso){2, 1, 2, 3, 3, -1, 0, 0, 0, 0});
   encolar_fifo(cola_llegadas, (Proceso){3, 3, 4, 2, 2, -1, 0, 0, 0, 0});
@@ -173,6 +180,8 @@ int main() {
   printf("=== INICIO DE LA SIMULACION (PRIORIDAD APROPIATIVA) ===\n\n");
 
   // El Sistema Operativo nunca duerme mientras haya trabajo pendiente
+  // mientras haya un proceso esperando turno "listos", o la cpu eses
+  // atendiendo a alguien
   while (hay_procesos(cola_llegadas) == true ||
          hay_procesos(cola_listos) == true || cpu_ocupada == true) {
 
@@ -180,19 +189,32 @@ int main() {
     // variables controladoras de la funcion main para acceder
     // externamente, de esta forma evitamos propagar codigo spagetti en la
     // funcion principal
+
+    // NOTE: preguntamos si llego algún proceso nuevo justo en el segundo actual
+    // de simulacion.
     gestionar_llegadas(cola_llegadas, cola_listos, reloj_global);
 
+    // NOTE: si entro uno con mas prioridad que el que esta atendiendo la cpu
+    //       lo desalojamos.
     verificar_desalojo(cola_listos, &proc_cpu, &cpu_ocupada);
 
+    // NOTE: Si la CPU esta libre, entonces sacara al primero de la cola de
+    // listos
+    //       y ponlo a chambear
     asignar_cpu_si_libre(cola_listos, &proc_cpu, &cpu_ocupada, reloj_global);
 
+    // NOTE: pasara un segundo
     ejecutar_un_segundo(&proc_cpu, &cpu_ocupada, &reloj_global);
 
-    finalizar_proceso_si_termina(&proc_cpu, &cpu_ocupada, reloj_global);
+    // NOTE: si ya no queda tiempo, el proceso termina
+    finalizar_proceso_si_termina(&proc_cpu, &cpu_ocupada, reloj_global,
+                                 procesos_terminados, &contador_terminados);
   }
 
   printf("\n=== SIMULACION TERMINADA ===\n");
   printf("Tiempo total: %d segundos\n", reloj_global);
+
+  imprimir_metricas(procesos_terminados, NUM_PROCESOS);
 
   free(cola_llegadas);
   free(cola_listos);
@@ -283,7 +305,8 @@ void ejecutar_un_segundo(Proceso *proc_cpu, bool *cpu_ocupada, int *reloj) {
 /* PASO VITAL 5: Si ya no le queda tiempo, el proceso completó su tarea y se va
  * a casa */
 void finalizar_proceso_si_termina(Proceso *proc_cpu, bool *cpu_ocupada,
-                                  int reloj) {
+                                  int reloj, Proceso terminados[],
+                                  int *contador_terminados) {
   if (*cpu_ocupada == true && proc_cpu->rafaga_restante == 0) {
     proc_cpu->t_fin = reloj;
     proc_cpu->t_retorno = proc_cpu->t_fin - proc_cpu->t_llegada;
@@ -293,6 +316,65 @@ void finalizar_proceso_si_termina(Proceso *proc_cpu, bool *cpu_ocupada,
         "[Reloj: %ds] P%d TERMINO su ejecucion. [Espera: %ds, Retorno: %ds]\n",
         reloj, proc_cpu->id, proc_cpu->t_espera, proc_cpu->t_retorno);
 
+    // ¡NUEVO! Guardamos la estructura final del proceso en nuestro arreglo
+    // histórico
+    terminados[*contador_terminados] = *proc_cpu;
+    *contador_terminados = *contador_terminados + 1;
+
     *cpu_ocupada = false; // La CPU queda libre para el siguiente ciclo
   }
+}
+
+// ============================================================
+// 7. FUNCION PARA GENERAR LA TABLA DE METRICAS
+// ============================================================
+void imprimir_metricas(Proceso terminados[], int total_procesos) {
+
+  // 1. Ordenamos el arreglo de terminados por el ID (P1, P2, P3...)
+  // Usamos un Método de Burbuja muy explícito porque los procesos
+  // pudieron haber terminado en desorden debido a la prioridad.
+  for (int i = 0; i < total_procesos - 1; i = i + 1) {
+    for (int j = 0; j < total_procesos - i - 1; j = j + 1) {
+
+      if (terminados[j].id > terminados[j + 1].id) {
+        // Intercambiamos los procesos
+        Proceso temporal = terminados[j];
+        terminados[j] = terminados[j + 1];
+        terminados[j + 1] = temporal;
+      }
+    }
+  }
+
+  // 2. Calculamos las sumatorias para los promedios
+  float suma_retorno = 0;
+  float suma_espera = 0;
+
+  for (int i = 0; i < total_procesos; i = i + 1) {
+    suma_retorno = suma_retorno + terminados[i].t_retorno;
+    suma_espera = suma_espera + terminados[i].t_espera;
+  }
+
+  float tiempo_retorno_promedio = suma_retorno / total_procesos;
+  float tiempo_espera_promedio = suma_espera / total_procesos;
+
+  // 3. Imprimimos la tabla con el formato exacto solicitado
+  printf("\n\n=== REPORTE DE METRICAS (OSTEP) ===\n");
+  printf("ID\tTF\tTR\tTE\t|\tTRP\tTEP\n");
+  printf("-----------------------------------------------------------\n");
+
+  for (int i = 0; i < total_procesos; i = i + 1) {
+
+    // Imprimimos los datos individuales del proceso usando tabulaciones (\t)
+    printf("P%d\t%d\t%d\t%d\t|", terminados[i].id, terminados[i].t_fin,
+           terminados[i].t_retorno, terminados[i].t_espera);
+
+    // Solo en la primera fila (i == 0) imprimimos los promedios del lado
+    // derecho
+    if (i == 0) {
+      printf("\t%.1f\t%.1f\n", tiempo_retorno_promedio, tiempo_espera_promedio);
+    } else {
+      printf("\n");
+    }
+  }
+  printf("===========================================================\n");
 }

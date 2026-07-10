@@ -1,22 +1,20 @@
 /*
  * NOTE: Para poder simular adecuadamente un algoritmo
- *       round robin, es necesario contemplar los siguientes asoectos:
+ * round robin, es necesario contemplar los siguientes asoectos:
  *
  *NOTE: * se nececita una cola FIFO, para enlistar los procesos en orden
-
-        * un reloj que avanza solo cuando hay trabajo, o salta
-          al siguiente evento de llegada si la cola esta vacia.
-
-        * manejar 3 momentos: llegada de procesos, ejecucion de quantum
-          y fin de proceso.
+ * * un reloj que avanza solo cuando hay trabajo, o salta
+ * al siguiente evento de llegada si la cola esta vacia.
+ * * manejar 3 momentos: llegada de procesos, ejecucion de quantum
+ * y fin de proceso.
  *
-*/
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #define QUANTUM 2
-#define NUM_PROCESOS 3
+#define NUM_PROCESOS 4
 
 // ============================================================
 // 1. ESTRUCTURA DEL PROCESO
@@ -75,6 +73,7 @@ void encolar(struct Cola *cola, Proceso p) {
   nuevoNodo->dato = p;
   nuevoNodo->siguiente = NULL;
 
+  // Comprobacion explicita
   if (hay_procesos_en_cola(cola) == 0) {
     // Cola vacia: el nuevo nodo es frente Y final al mismo tiempo
     cola->frente = nuevoNodo;
@@ -91,6 +90,7 @@ Proceso desencolar(struct Cola *cola) {
   Proceso dato = temp->dato;
 
   cola->frente = cola->frente->siguiente;
+
   if (cola->frente == NULL) {
     // Si ya no queda nadie, el final tambien debe quedar en NULL
     cola->final = NULL;
@@ -119,8 +119,8 @@ void verificar_llegadas(struct Cola *espera, struct Cola *listos,
                         int reloj_global) {
 
   // nececitamos comprobar que t_llegada sea menor o igual al reloj_global
-  //
-  while (hay_procesos_en_cola(espera) &&
+  // Comprobaciones explícitas sin contracciones
+  while (hay_procesos_en_cola(espera) == 1 &&
          ver_frente(espera).t_llegada <= reloj_global) {
 
     Proceso llegado = desencolar(espera);
@@ -143,18 +143,69 @@ void llenar_cola_automaticamente(struct Cola *espera) {
   Proceso p1 = {1, 0, 5, 5, -1, 0, 0, 0, 0};
   Proceso p2 = {2, 4, 2, 2, -1, 0, 0, 0, 0};
   Proceso p3 = {3, 5, 4, 4, -1, 0, 0, 0, 0};
+  Proceso p4 = {4, 6, 5, 5, -1, 0, 0, 0, 0};
 
   encolar(espera, p1);
   encolar(espera, p2);
   encolar(espera, p3);
+  encolar(espera, p4);
 }
 
 // ============================================================
-// 5. PROGRAMA PRINCIPAL
+// 5. FUNCION PARA IMPRIMIR LAS METRICAS
+// ============================================================
+void imprimir_metricas(Proceso terminados[], int total_procesos) {
+  // Primero, ordenamos los procesos por su ID (P1, P2, P3...) usando Burbuja
+  for (int i = 0; i < total_procesos - 1; i = i + 1) {
+    for (int j = 0; j < total_procesos - i - 1; j = j + 1) {
+      if (terminados[j].id > terminados[j + 1].id) {
+        Proceso temporal = terminados[j];
+        terminados[j] = terminados[j + 1];
+        terminados[j + 1] = temporal;
+      }
+    }
+  }
+
+  // Calculamos las sumatorias para obtener los promedios
+  float suma_retorno = 0;
+  float suma_espera = 0;
+
+  for (int i = 0; i < total_procesos; i = i + 1) {
+    suma_retorno = suma_retorno + terminados[i].t_retorno;
+    suma_espera = suma_espera + terminados[i].t_espera;
+  }
+
+  float trp = suma_retorno / total_procesos;
+  float tep = suma_espera / total_procesos;
+
+  // Imprimimos la tabla con el formato exacto requerido
+  printf("\n\n=== REPORTE DE METRICAS ===\n");
+  printf("     TF  TR  TE       |  TRP  TEP\n");
+
+  for (int i = 0; i < total_procesos; i = i + 1) {
+    // En la primera fila imprimimos los procesos Y los promedios
+    if (i == 0) {
+      printf("p%d   %d   %d    %d         | %.1f   %.1f\n", terminados[i].id,
+             terminados[i].t_fin, terminados[i].t_retorno,
+             terminados[i].t_espera, trp, tep);
+    } else {
+      // En las filas siguientes solo imprimimos los datos del proceso
+      printf("p%d   %d   %d    %d\n", terminados[i].id, terminados[i].t_fin,
+             terminados[i].t_retorno, terminados[i].t_espera);
+    }
+  }
+}
+
+// ============================================================
+// 6. PROGRAMA PRINCIPAL
 // ============================================================
 int main() {
 
   int reloj_global = 0;
+
+  // Arreglo histórico para recolectar las métricas de los procesos que terminan
+  Proceso terminados[NUM_PROCESOS];
+  int contador_terminados = 0;
 
   struct Cola *cola_espera = crear_cola(); // procesos que aun no llegan
   struct Cola *cola_listos = crear_cola(); // procesos listos para ser atendidos
@@ -166,8 +217,8 @@ int main() {
   printf("--------------------------------------\n");
 
   // El ciclo sigue mientras quede alguien esperando O alguien listo
-  while (hay_procesos_en_cola(cola_listos) ||
-         hay_procesos_en_cola(cola_espera)) {
+  while (hay_procesos_en_cola(cola_listos) == 1 ||
+         hay_procesos_en_cola(cola_espera) == 1) {
 
     // WARNING: PASO 1: pasar a "listos" a quien ya le tocaba llegar
     verificar_llegadas(cola_espera, cola_listos, reloj_global);
@@ -223,6 +274,10 @@ int main() {
       proc_actual.t_retorno = proc_actual.t_fin - proc_actual.t_llegada;
       // 3. Calcula t_espera  = t_retorno - rafaga_total
       proc_actual.t_espera = proc_actual.t_retorno - proc_actual.rafaga_total;
+
+      // GUARDAR PARA EL REPORTE FINAL:
+      terminados[contador_terminados] = proc_actual;
+      contador_terminados = contador_terminados + 1;
       // ============================================
 
       printf("  -> Proceso %d TERMINO. [Retorno: %ds | Espera: %ds | "
@@ -251,13 +306,13 @@ int main() {
       //
       //  WARNING: El orden de la cola debe de reflejar el orden de llegada, o
       //  de espera.
-      //           Si un nuevo proceso llega mientras el proceso actual estaba
-      //           en la cpu. ESE NUEVO PROCESO ES EL QUE DEBE DE SER ATENDIDO
-      //           ANTES QUE ESTE PROCESO QUE ESTAMOS POR ENCOLAR
+      //             Si un nuevo proceso llega mientras el proceso actual estaba
+      //             en la cpu. ESE NUEVO PROCESO ES EL QUE DEBE DE SER ATENDIDO
+      //             ANTES QUE ESTE PROCESO QUE ESTAMOS POR ENCOLAR
       // INFO: como el reloj_global ya avanzo, durante la ejecucion del quantum
       // es posible
-      //       que hayan nuevas llegadas, por lo que debemos de verificar antes
-      //       de reencolar
+      //         que hayan nuevas llegadas, por lo que debemos de verificar
+      //         antes de reencolar
       verificar_llegadas(cola_espera, cola_listos, reloj_global);
 
       // ya qye verificamos si de casualidad se presento un proceso
@@ -269,6 +324,9 @@ int main() {
 
   printf("\n=== SIMULACION TERMINADA ===\n");
   printf("Tiempo total de uso de CPU: %d segundos\n", reloj_global);
+
+  // Llamamos a la función encargada de generar nuestra tabla final
+  imprimir_metricas(terminados, NUM_PROCESOS);
 
   // Nota: cola_espera y cola_listos ya deberian estar vacias aqui,
   // pero libera cola_espera y cola_listos (los structs 'Cola' en si)
