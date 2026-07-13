@@ -72,6 +72,7 @@ bool hay_procesos(struct Cola *cola) {
 }
 
 void encolar_fifo(struct Cola *cola, Proceso p) {
+
   struct Nodo *nuevo = (struct Nodo *)malloc(sizeof(struct Nodo));
   nuevo->dato = p;
   nuevo->siguiente = NULL;
@@ -108,37 +109,77 @@ Proceso desencolar(struct Cola *cola) {
 }
 
 // sirve para ver el proceso que esta al frente de la cola sin hacerle nada
+// regresamos una copua del proceso que se encuentre
+// si es nulo podremos manejar que no hay nada en la parte frente de la cola
 Proceso ver_frente(struct Cola *cola) { return cola->frente->dato; }
 
 // ============================================================================
 // 3. COLA DE PRIORIDAD (La magia principal de este algoritmo)
 // ============================================================================
-void insertar_por_prioridad(struct Cola *cola, Proceso p) {
+//
+void insertar_por_prioridad(struct Cola *cola_listos, Proceso p) {
+
   struct Nodo *nuevo = (struct Nodo *)malloc(sizeof(struct Nodo));
   nuevo->dato = p;
   nuevo->siguiente = NULL;
 
-  if (cola->frente == NULL || p.prioridad < cola->frente->dato.prioridad) {
-    nuevo->siguiente = cola->frente;
-    cola->frente = nuevo;
-    if (cola->final == NULL) {
+  // CASO 1 : La cola esta vacio o el nuevo elemento es ma importante que el que
+  // ya esta enfrente
+  //
+  // si la cola esta vacia "no hay nada en la frente"
+  // entonces el letrero final debe de apuntar a a este nuevo nodo.
+  // recordando que aqui las prioridades pequeñas son las
+  // mas importantes.
+  // vasicamente comprobamos si esta vacio o si el nuevo elemento es mas
+  // importante que el que ya esta
+  if (cola_listos->frente == NULL ||
+      p.prioridad < cola_listos->frente->dato.prioridad) {
+    nuevo->siguiente = cola_listos->frente;
+    cola_listos->frente = nuevo;
 
-      cola->final = nuevo;
+    if (cola_listos->final == NULL) {
+
+      cola_listos->final = nuevo;
     }
     return;
   }
 
-  struct Nodo *actual = cola->frente;
+  // si no es vacio y no es mas importante
+  // usamos este nodo auxiliar
+  struct Nodo *actual = cola_listos->frente;
+
+  // el proceso debe de insrtarse en algun lado, en medio o alfinal de la fila.
+  // el objetico de este while es caminar a lo largo de los vagones y encontrar
+  // el lugar exacto donde menter este nuevo proceso sin romper
+  // el orden de pripridad.
+  //  como la lista es de un solo sentido
+  //  actual->siguiente ==null indicaria que nos pasamos
+  //  actual->siguiente->dato.prioridad <= p.prioridad idica que sigua avanzando
+  //  mientras el que este adelante sea mas urgente que p
+  //  [frente]->[]->[]->[]->[]->[final]->null [RECORDANDO QUE SALEN POR FRENTE]
+  //  vasicamente vamos iterando la flechita.
+  //  no vamo a ir fijando en el siguoente nodo
+  //  simpre buscando un numero mayor que la prioridad de p
   while (actual->siguiente != NULL &&
          actual->siguiente->dato.prioridad <= p.prioridad) {
     actual = actual->siguiente;
   }
 
+  // el vagon nuevo estira el brazo derecho y agarra al vagon que esta
+  // adelante de actual
+  // con esto no perdermos la direccion del siguiente nodo y no rompemos la
+  // lista enlazada
   nuevo->siguiente = actual->siguiente;
+
+  // el vagon actual suelta el brazo del siguiente viejo y ahora
+  // agarra al vagon nuevo
   actual->siguiente = nuevo;
 
+  // esto es por si lo que insertamos era el menos urgente y se inserto
+  // al final de la cola enlzada
+  // debemos de mover el letrero a este elemento que ahora es el final.
   if (nuevo->siguiente == NULL) {
-    cola->final = nuevo;
+    cola_listos->final = nuevo;
   }
 }
 
@@ -176,6 +217,16 @@ int main() {
   encolar_fifo(cola_llegadas, (Proceso){1, 2, 0, 5, 5, -1, 0, 0, 0, 0});
   encolar_fifo(cola_llegadas, (Proceso){2, 1, 2, 3, 3, -1, 0, 0, 0, 0});
   encolar_fifo(cola_llegadas, (Proceso){3, 3, 4, 2, 2, -1, 0, 0, 0, 0});
+
+  /*
+   otro ejemplo
+   encolar_fifo(cola_llegadas, (Proceso){1, 3, 0, 4, 4, -1, 0, 0, 0, 0});
+   encolar_fifo(cola_llegadas, (Proceso){2, 1, 0, 3, 3, -1, 0, 0, 0, 0});
+   encolar_fifo(cola_llegadas, (Proceso){3, 2, 0, 2, 2, -1, 0, 0, 0, 0});
+
+   trp = 5.67
+   tep: 2.67
+   * */
 
   printf("=== INICIO DE LA SIMULACION (PRIORIDAD APROPIATIVA) ===\n\n");
 
@@ -280,9 +331,15 @@ void asignar_cpu_si_libre(struct Cola *listos, Proceso *proc_cpu,
     *proc_cpu = desencolar(listos);
     *cpu_ocupada = true;
 
-    // Si entra por primera vez, calculamos su métrica de Respuesta (OSTEP)
+    // Si entra por primera vez, calculamos su métrica de Respuesta
+    // con el -1 sabemos que es la primera vez que entra a la CPU
     if (proc_cpu->t_inicio == -1) {
+
+      // el tiempo de inicio corresponde al reloj actual
       proc_cpu->t_inicio = reloj;
+
+      // calculamos el tiempo de respuesta usando la forrmula
+      // tiempo de respuesta = tiempo de inicio - tiempo de llegada
       proc_cpu->t_respuesta = proc_cpu->t_inicio - proc_cpu->t_llegada;
     }
     printf("  -> CPU asignada a P%d (Prioridad %d)\n", proc_cpu->id,
