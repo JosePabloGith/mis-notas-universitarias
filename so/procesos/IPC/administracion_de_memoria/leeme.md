@@ -187,7 +187,56 @@ Los conceptos siguen vigentes, pero las implementaciones en los Sistemas Operati
 
 - Óptimo (OPT): Sigue siendo imposible de implementar en la vida real porque requeriría predecir el futuro exacto del código. Solo se usa en laboratorios para medir qué tan buenos son otros algoritmos en simulaciones.
 
-- LRU Puro: Es un algoritmo excelente en teoría, pero en la práctica es demasiado costoso para el hardware. Para mantener un LRU perfecto, la CPU tendría que actualizar una marca de tiempo (timestamp) o mover nodos en una lista enlazada en cada mismísima referencia de memoria, lo que destruiría el rendimiento del procesador.
+- LRU Puro: Es un algoritmo excelente en teoría, pero en la práctica es demasiado costoso para el hardware. Para mantener un LRU perfecto, la CPU tendría que actualizar una marca de tiempo (timestamp) o mover nodos en una lista enlazada en cada mismísima referencia de memoria, lo que destruiría el rendimiento del procesador.instrucción
+
+- LFU:
+saca la pagina que se ha usado menos veces en total
+sin importar cuando fue la ultima vez que se uso
+
+- Mantiene un contador de accesos por pagina
+- problema: una pagina puede haber  ...
+
+Este algoritmo no es tan sencillo, se sacara al que tienes mas tiempo
+sin utilizar
+
+# 5. Reloj / segunda oportunidad (clock / second chance)
+
+Es una aproximación practica y eficiente de LRU. mucho mas fascil de implementar
+
+```c
+// el reloj recorre toddas las paginas en memoria
+// si estan en 1 los cambia a 0 con la idea de que si pasa nuevamente
+// y encuentra que esta en 0 "no se ha usado" entonces
+// lo que hace es sacarlo de memoria y ponerlo en el disco
+// ahora bien si lo encuentra en 1 significa que
+// esta siendo usado y lo que hace es cambiarlo a 0 y seguir buscando
+// este lo usa mucho linux ;D 
+ 
+
+```
+
+# ¿durante un fallo de pagina el sistema operativo debe de?
+
+copiar una pagina desde el SSD hasta
+la memoria RAM
+
+¿quien reliza fisicamente esa copia?
+
+- el MMU no hace eso, el solo lo encuentra. El que lo hace es un componete de hw
+  llamado DMA (Direct Memory Access) que es un controlador de memoria que se encarga de hacer la copia de la pagina desde el disco hasta la RAM sin necesidad de que el procesador intervenga en la copia, lo que permite que el procesador pueda seguir ejecutando otras instrucciones mientras se realiza la copia de la pagina. "no solo es uno, ojo. hay varios dma conectados a diferentes dispositivos de entrada y salida"
+
+## Funcionamiento basico
+
+La CPU le indica al procesador DMA:
+
+- direccion de origen
+- direccion de desztino
+- canitiodad de datos a autilizar
+
+1. El controlador DMA toma el control del bus del
+sistema
+2. Transfiere los datos direrctamente entre la memoria y el dispositivo de E/S
+3. una vez finalizada la transferencia, el controlador DMA genera una interrupcion para notificar a la CPU que la transferencia ha terminado y que los datos estan listos para ser utilizados.
 
 ## ¿Qué se usa en los sistemas modernos hoy en día?
 
@@ -200,3 +249,11 @@ En lugar de una sola lista, Linux divide las páginas de la memoria en dos categ
 2. Lista Inactiva: Contiene páginas candidatas a ser expulsadas al espacio de intercambio (swap space) si ocurre un fallo de página (page fault).
 
 Cuando una página inactiva es accedida de nuevo, el kernel la promueve a la lista activa. Si la lista activa se satura, las páginas menos usadas "caen" hacia la lista inactiva. De esta forma, el sistema operativo logra un comportamiento muy cercano al LRU perfecto, pero con un consumo de hardware mínimo y veloz.
+
+# FIN) SISTEMAS DE ARCHIVOS
+
+Recuerda que se usan los famosos inodos, el "inodo contiene toda la informacion de un archivo, excepto su nombre y su contenido. El inodo contiene metadatos como permisos, propietario, tamaño, fechas de creación y modificación, y punteros a los bloques de datos en el disco donde se almacena el contenido del archivo."
+
+entonces es fascina
+
+# Actividad
